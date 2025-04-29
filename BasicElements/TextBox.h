@@ -62,9 +62,18 @@ public:
             }
             else if (ker.wVirtualKeyCode == VK_BACK && !text.empty()) {
                 text.pop_back();
-            }
-            redmode = text == L"password";        
+            }      
             draw();
         }
+    }
+
+    void setFocus(bool f) override {
+        Control::setFocus(f);
+        if (f) {
+            subscribeKeyboard();
+        } else {
+            unsubscribeKeyboard();
+        }
+        
     }
 };

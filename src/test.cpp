@@ -7,7 +7,7 @@
 #include "Control.h"
 #include "Render.h"
 #include "../BasicElements/FiButton.h"
-#include "../BasicElements/TextBox.h"
+#include "../BasicElements/FiTextBox.h"
 #include "../BasicElements/CheckBox.h"
 
 // ------------------ Main ------------------
@@ -21,12 +21,16 @@ void createMessageBox() {
     MessageBoxW(NULL, L"Hello, World!", L"Success", MB_OK);
 }
 
-    
+void validatePassword(const std::wstring& password) {
+    if (password == L"password") MessageBoxW(NULL, L"Password is valid!", L"Success", MB_OK);
+    else MessageBoxW(NULL, L"Password is invalid!", L"Error", MB_ICONERROR);
+}
+
+
 int main() {
     HANDLE hin = GetStdHandle(STD_INPUT_HANDLE);
-    FiButton btn(SMALL_RECT{10, 2, 30, 4}, L"Click Me", createMessageBox);
-    FocusManager::registerControl(std::make_shared<FiButton>(btn));
-    FocusManager::registerControl(std::make_shared<TextBox>(SMALL_RECT{10, 6, 40, 8}, L""));
+    FocusManager::registerControl(std::make_shared<FiButton>(SMALL_RECT{10, 2, 30, 4}, L"Click Me", createMessageBox));
+    FocusManager::registerControl(std::make_shared<FiTextBox>(SMALL_RECT{10, 6, 40, 8}, L"", validatePassword));
     FocusManager::registerControl(std::make_shared<CheckBox>(SMALL_RECT{10, 10, 40, 12}, L"Checkbox"));
     FocusManager::nextFocus(); 
     FocusManager::redrawAll();

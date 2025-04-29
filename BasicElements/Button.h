@@ -12,9 +12,9 @@ public:
         });
     }
     void draw() override {
-                     Render::attr = FOREGROUND_RED   | FOREGROUND_GREEN | FOREGROUND_BLUE;
-        if (focused) Render::attr = BACKGROUND_GREEN | FOREGROUND_RED   | FOREGROUND_BLUE   | FOREGROUND_INTENSITY;
-        if (hovered) Render::attr = BACKGROUND_BLUE  | FOREGROUND_RED   | FOREGROUND_GREEN  | FOREGROUND_INTENSITY;
+                          Render::attr = FOREGROUND_RED   | FOREGROUND_GREEN | FOREGROUND_BLUE;
+        if      (hovered) Render::attr = BACKGROUND_BLUE  | FOREGROUND_RED   | FOREGROUND_GREEN  | FOREGROUND_INTENSITY;
+        if      (focused) Render::attr = BACKGROUND_GREEN | FOREGROUND_RED   | FOREGROUND_BLUE   | FOREGROUND_INTENSITY;
         Render::fillBox(rect);
         Render::DrawBox(rect);
         Render::drawTextCentered(text, rect);
