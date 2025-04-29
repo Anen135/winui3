@@ -4,107 +4,27 @@
 #include <string>
 #include <memory>
 #include <functional>
-#include <map>
-#include <typeindex>
-#include <algorithm>
 #include "EventManager.h"
 #include "InputState.h"
-
-// ------------------ Base Control ------------------
-class Render {
-public:
-    WORD attr {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE};
-    HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD written;
-
-    void DrawBox(SMALL_RECT rect) {
-        DWORD written;
-        COORD pos;
-        WCHAR hline = L'\u2500'; // ─
-        WCHAR vline = L'\u2502'; // │
-        WCHAR tl = L'\u250C';    // ┌
-        WCHAR tr = L'\u2510';    // ┐
-        WCHAR bl = L'\u2514';    // └
-        WCHAR br = L'\u2518';    // ┘
-
-        pos = { rect.Left, rect.Top };
-        WriteConsoleOutputCharacterW(hout, &tl, 1, pos, &written);
-        for (SHORT x = rect.Left + 1; x < rect.Right; x++) {
-            pos = { x, rect.Top };
-            WriteConsoleOutputCharacterW(hout, &hline, 1, pos, &written);
-        }
-        pos = { rect.Right, rect.Top };
-        WriteConsoleOutputCharacterW(hout, &tr, 1, pos, &written);
-
-        for (SHORT y = rect.Top + 1; y < rect.Bottom; y++) {
-            pos = { rect.Left, y };
-            WriteConsoleOutputCharacterW(hout, &vline, 1, pos, &written);
-            pos = { rect.Right, y };
-            WriteConsoleOutputCharacterW(hout, &vline, 1, pos, &written);
-        }
-
-        pos = { rect.Left, rect.Bottom };
-        WriteConsoleOutputCharacterW(hout, &bl, 1, pos, &written);
-        for (SHORT x = rect.Left + 1; x < rect.Right; x++) {
-            pos = { x, rect.Bottom };
-            WriteConsoleOutputCharacterW(hout, &hline, 1, pos, &written);
-        }
-        pos = { rect.Right, rect.Bottom };
-        WriteConsoleOutputCharacterW(hout, &br, 1, pos, &written);
-    }
-};
-
-class Control {
-protected:
-    SMALL_RECT rect;
-    std::wstring text;
-    bool focused = false;
-    bool hovered = false;
-
-public:
-    Control(SMALL_RECT r, const std::wstring& t) : rect(r), text(t) {}
-
-    virtual void draw() = 0;
-    virtual void onMouse(const MOUSE_EVENT_RECORD& mer);
-    virtual void onKey(const KEY_EVENT_RECORD& ker) {}
-
-    bool isHovered(const COORD& pos);
-    void setFocus(bool f);
-    bool hasFocus() const { return focused; }
-};
-
-bool Control::isHovered(const COORD& pos) {
-    return pos.X >= rect.Left && pos.X <= rect.Right &&
-           pos.Y >= rect.Top && pos.Y <= rect.Bottom;
-}
-
-void Control::onMouse(const MOUSE_EVENT_RECORD& mer) {
-    bool wasHovered = hovered;
-    hovered = isHovered(mer.dwMousePosition);
-    if (hovered != wasHovered) {
-        draw();
-    }
-}
-
-void Control::setFocus(bool f) {
-    focused = f;
-    draw();
-}
+#include "FocusManager.h"
+#include "Control.h"
+#include "Render.h"
 
 // ------------------ Button ------------------
 class Button : public Control, public Render {
 public:
-    Button(SMALL_RECT r, const std::wstring& t) : Control(r, t) {
+    std::wstring text;
+    Button(SMALL_RECT r, const std::wstring t) : Control(r), text(t) {
         EventManager::getInstance().addHandler<MOUSE_EVENT_RECORD>([this](const MOUSE_EVENT_RECORD& mer) {
             this->onMouse(mer);
         });
     }
     void draw() override {
         Render::attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-        if (hovered)
-            attr = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
         if (focused)
             attr = BACKGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        if (hovered)
+            attr = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 
         for (SHORT y = rect.Top; y <= rect.Bottom; y++) {
             for (SHORT x = rect.Left; x <= rect.Right; x++) {
@@ -121,8 +41,9 @@ public:
         Control::onMouse(mer);
         if ((mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)) {
             if (hovered) {
+                FocusManager::focusControl(this);  
                 setFocus(true);
-                MessageBoxW(NULL, L"Button clicked!", L"Info", MB_OK);
+                onClick();
             } else {
                 setFocus(false);
             }
@@ -130,11 +51,14 @@ public:
     }
 };
 
+
 // ------------------ TextBox ------------------
 class TextBox : public Control, public Render {
 std::shared_ptr<std::function<void(const KEY_EVENT_RECORD&)>> handler;
+bool redmode = false;
 public:
-    TextBox(SMALL_RECT r, const std::wstring& t) : Control(r, t) {
+    std::wstring text;
+    TextBox(SMALL_RECT r, const std::wstring t) : Control(r), text(t) {
         EventManager::getInstance().addHandler<MOUSE_EVENT_RECORD>([this](const MOUSE_EVENT_RECORD& mer) {
             this->onMouse(mer);
         });
@@ -145,10 +69,12 @@ public:
         COORD pos;
         Render::attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
-        if (hovered)
-            attr = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-        if (focused)
+        if (redmode)
+            attr = BACKGROUND_RED | FOREGROUND_INTENSITY;
+        else if (focused)
             attr = BACKGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        else if (hovered)
+            attr = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
         
         for (SHORT y = rect.Top; y <= rect.Bottom; y++) {
             for (SHORT x = rect.Left; x <= rect.Right; x++) {
@@ -171,7 +97,8 @@ public:
                 EventManager::getInstance().removeHandler<KEY_EVENT_RECORD>(handler);
                 return;
             } 
-            if (!focused) {
+            FocusManager::focusControl(this);  
+            if (focused) {
                 setFocus(true);
                 handler = EventManager::getInstance().addHandler<KEY_EVENT_RECORD>([this](const KEY_EVENT_RECORD & ker) {
                     this->onKey(ker);
@@ -180,41 +107,61 @@ public:
         }
     }
 
+    void subscribeKeyboard() {
+        if (handler) return;
+        handler = EventManager::getInstance().addHandler<KEY_EVENT_RECORD>(
+            [this](const KEY_EVENT_RECORD& ker) {
+                onKey(ker);
+            }
+        );
+    }
+
+    void unsubscribeKeyboard() {
+        if (handler) {
+            EventManager::getInstance().removeHandler<KEY_EVENT_RECORD>(handler);
+            handler.reset();
+        }
+    }
+
     void onKey(const KEY_EVENT_RECORD& ker) override {
         if (ker.bKeyDown) {
             if (ker.uChar.UnicodeChar >= 32 && ker.uChar.UnicodeChar <= 126) {
                 text.push_back(ker.uChar.UnicodeChar);
-                draw();
             }
             else if (ker.wVirtualKeyCode == VK_BACK && !text.empty()) {
                 text.pop_back();
-                draw();
             }
+            redmode = text == L"password";        
+            draw();
         }
     }
 };
 
 // ------------------ CheckBox ------------------
 class CheckBox : public Control, public Render {
-private:
-    bool checked = false;
-
 public:
-    CheckBox(SMALL_RECT r, const std::wstring& t) : Control(r, t) {
+    bool checked = false;
+    std::wstring text;
+    CheckBox(SMALL_RECT r, std::wstring t) : Control(r), text(t) {
         EventManager::getInstance().addHandler<MOUSE_EVENT_RECORD>([this](const MOUSE_EVENT_RECORD& mer) {
             this->onMouse(mer);
         });
     }
 
+    void drawContent() {
+        std::wstring displayText = checked ? L"[X] " : L"[ ] ";
+        displayText += text;
+        WriteConsoleOutputCharacterW(hout, displayText.c_str(), displayText.size(), { (SHORT)(rect.Left + 1), (SHORT)((rect.Top + rect.Bottom) / 2) }, &written);
+    }
+
     void draw() override {
-        DWORD written;
         COORD coord;
         Render::attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
-        if (hovered)
-            attr = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
         if (focused)
             attr = BACKGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        if (hovered)
+            attr = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 
         for (SHORT y = rect.Top; y <= rect.Bottom; y++) {
             for (SHORT x = rect.Left; x <= rect.Right; x++) {
@@ -223,66 +170,86 @@ public:
                 WriteConsoleOutputCharacterW(hout, L" ", 1, coord, &written);
             }
         }
-
-        std::wstring displayText = checked ? L"[X] " : L"[ ] ";
-        displayText += text;
-
-        coord = { (SHORT)(rect.Left + 1), (SHORT)((rect.Top + rect.Bottom) / 2) };
-        WriteConsoleOutputCharacterW(hout, displayText.c_str(), displayText.size(), coord, &written);
+        drawContent();
     }
 
     void onMouse(const MOUSE_EVENT_RECORD& mer) override {
         Control::onMouse(mer);
         if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
             if (hovered) {
+                FocusManager::focusControl(this);  
                 checked = !checked;
-                setFocus(true);
+                drawContent();
             } else {
                 setFocus(false);
             }
         }
     }
+};  
+
+class LoginForm {
+    std::shared_ptr<TextBox> loginBox;
+    std::shared_ptr<TextBox> passwordBox;
+    std::shared_ptr<CheckBox> rememberMeBox;
+    std::shared_ptr<Button> loginButton;
+public:
+    void setup() {
+        loginBox = std::make_shared<TextBox>(SMALL_RECT{ 10, 4, 50, 6 }, L"Login");
+        passwordBox = std::make_shared<TextBox>(SMALL_RECT{ 10, 8, 50, 10 }, L"Password");
+        rememberMeBox = std::make_shared<CheckBox>(SMALL_RECT{ 10, 12, 50, 14 }, L"Remember Me");
+        loginButton = std::make_shared<Button>(SMALL_RECT{ 20, 16, 40, 18 }, L"Login");
+
+        loginButton->onClick = [this]() {
+            validate();
+        };
+
+        FocusManager::registerControl(loginBox);
+        FocusManager::registerControl(passwordBox);
+        FocusManager::registerControl(rememberMeBox);
+        FocusManager::registerControl(loginButton);
+    }
+
+    void draw() {
+        FocusManager::redrawAll();
+    }
+
+    void validate() {
+        std::wstring login = loginBox->text;
+        std::wstring password = passwordBox->text;
+
+        if (login == L"admin" && password == L"1234") {
+            MessageBoxW(NULL, rememberMeBox->checked ? L"Welcome, admin! (Remembered)" : L"Welcome, admin!", L"Success", MB_OK);
+        } else {
+            MessageBoxW(NULL, L"Invalid login or password.", L"Error", MB_ICONERROR);
+        }
+    }
 };
 
-// ------------------ Main ------------------
-HANDLE hin, hout;
-std::vector<std::shared_ptr<Control>> controls;
-int focusedIndex = 0;
-
-void RedrawAll() {
-    for (auto& ctrl : controls) {
-        ctrl->draw();
-    }
-}
-
-void HandleKey(const KEY_EVENT_RECORD& ker) {
+void FocusChanger(const KEY_EVENT_RECORD& ker) {
     if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) {
-        controls[focusedIndex]->setFocus(false);
-        focusedIndex = (focusedIndex + 1) % controls.size();
-        controls[focusedIndex]->setFocus(true);
+        FocusManager::nextFocus();
     }
 }
 
 int main() {
-    hin = GetStdHandle(STD_INPUT_HANDLE);
-    hout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    controls.push_back(std::make_shared<Button>(SMALL_RECT{10, 2, 30, 4}, L"Click Me"));
-    controls.push_back(std::make_shared<TextBox>(SMALL_RECT{10, 6, 40, 8}, L""));
-    controls.push_back(std::make_shared<CheckBox>(SMALL_RECT{10, 10, 40, 12}, L"Checkbox"));
-
-    controls[0]->setFocus(true);
-    RedrawAll();
+    HANDLE hin = GetStdHandle(STD_INPUT_HANDLE);
+    HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
 
     DWORD mode;
     GetConsoleMode(hin, &mode);
     SetConsoleMode(hin, ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT);
 
+    LoginForm form;
+    form.setup();
+    form.draw();
+
     auto& eventManager = EventManager::getInstance();
-    eventManager.addHandler<KEY_EVENT_RECORD>(HandleKey);
+    eventManager.addHandler<KEY_EVENT_RECORD>(FocusChanger);
     eventManager.start();
 
-    std::cout << "Press ESC to exit..." << std::endl;
+    InputState::setConsoleCursorPosition({ 0, 0 });
+    std::cout << " [Press ESC to exit...] " << std::endl;
+
     while (!InputState::isKeyPressed(VK_ESCAPE)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

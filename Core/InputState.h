@@ -30,4 +30,6 @@ public:
         GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
         return { (SHORT)(p.x / 8), (SHORT)(p.y / 16) }; // NOTE: font-size dependent
     }
+
+    static inline void setConsoleCursorPosition(COORD pos) { SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos); }
 };

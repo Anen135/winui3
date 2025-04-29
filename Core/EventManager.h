@@ -18,20 +18,25 @@ private:
     class HandlerContainer {
     private:
         std::vector<std::shared_ptr<std::function<void(const T&)>>> handlers;
-        mutable std::shared_mutex mutex;
+        mutable std::mutex mutex;
 
     public:
         // Добавление обработчика
         std::shared_ptr<std::function<void(const T&)>> addHandler(std::function<void(const T&)> handler) {
-            std::unique_lock lock(mutex); 
+            std::lock_guard lock(mutex); 
             auto handlerPtr = std::make_shared<std::function<void(const T&)>>(handler);
             handlers.push_back(handlerPtr);
             return handlerPtr; 
         }
 
+        void clearHandlers() {
+            std::lock_guard lock(mutex);
+            handlers.clear();
+        }
+
         // Удаление обработчика по указателю
         bool removeHandler(const std::shared_ptr<std::function<void(const T&)>>& handlerPtr) {
-            std::unique_lock lock(mutex); // Блокируем мьютекс для записи
+            std::lock_guard lock(mutex); // Блокируем мьютекс для записи
             auto it = std::find_if(handlers.begin(), handlers.end(), [&handlerPtr](const auto& ptr) {
                 return ptr == handlerPtr; // Сравниваем указатели
             });
@@ -44,12 +49,20 @@ private:
 
         // Вызов всех обработчиков
         void invokeHandlers(const T& event) const {
-            std::shared_lock lock(mutex); 
-            for (const auto& handler : handlers) {
-                (*handler)(event); 
+            std::vector<std::shared_ptr<std::function<void(const T&)>>> handlersCopy;
+            {
+                std::lock_guard lock(mutex);
+                handlersCopy = handlers; // Копируем все обработчики при захваченном мьютексе
+            }
+
+            for (const auto& handler : handlersCopy) {
+                (*handler)(event); // Вызываем без захваченного мьютекса
             }
         }
+
     };
+
+
 
     // Контейнеры для каждого типа событий winAPI, другие не нужны.
     HandlerContainer<KEY_EVENT_RECORD> keyHandlers;
@@ -111,6 +124,15 @@ public:
         return instance;
     }
 
+    void clearHandlers() {
+        keyHandlers.clearHandlers();
+        mouseHandlers.clearHandlers();
+        focusHandlers.clearHandlers();
+        menuHandlers.clearHandlers();
+        windowBufferSizeHandlers.clearHandlers();
+        inputHandlers.clearHandlers();
+    }
+
     // Добавление обработчиков для каждого типа событий
     template <typename T>
     inline std::shared_ptr<std::function<void(const T&)>> addHandler(std::function<void(const T&)> handler) {
@@ -143,6 +165,23 @@ public:
             return windowBufferSizeHandlers.removeHandler(handlerPtr);
         } else if constexpr (std::is_same_v<T, INPUT_RECORD>) {
             return inputHandlers.removeHandler(handlerPtr);
+        }
+    }
+
+    template <typename T>
+    inline void clearHandlers() {
+        if constexpr (std::is_same_v<T, KEY_EVENT_RECORD>) {
+            keyHandlers.clearHandlers();
+        } else if constexpr (std::is_same_v<T, MOUSE_EVENT_RECORD>) {
+             mouseHandlers.clearHandlers();
+        } else if constexpr (std::is_same_v<T, FOCUS_EVENT_RECORD>) {
+             focusHandlers.clearHandlers();
+        } else if constexpr (std::is_same_v<T, MENU_EVENT_RECORD>) {
+             menuHandlers.clearHandlers();
+        } else if constexpr (std::is_same_v<T, WINDOW_BUFFER_SIZE_RECORD>) {
+             windowBufferSizeHandlers.clearHandlers();
+        } else if constexpr (std::is_same_v<T, INPUT_RECORD>) {
+             inputHandlers.clearHandlers();
         }
     }
 
