@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Добавляет исполняемый файл. 
 add_executable(${PROJECT_NAME}
-    src/test.cpp
+    src/test2.cpp
     Core/Control.cpp
 )
 
