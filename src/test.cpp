@@ -11,7 +11,7 @@
 #include "../BasicElements/CheckBox.h"
 
 // ------------------ Main ------------------
-void FocusChanger(const KEY_EVENT_RECORD& ker) {
+void KeyHandler(const KEY_EVENT_RECORD& ker) {
     if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) {
         FocusManager::nextFocus();
     }
@@ -40,7 +40,7 @@ int main() {
     SetConsoleMode(hin, ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT);
 
     auto& eventManager = EventManager::getInstance();
-    eventManager.addHandler<KEY_EVENT_RECORD>(FocusChanger);
+    eventManager.addHandler<KEY_EVENT_RECORD>(KeyHandler);
     eventManager.start();
 
     InputState::setConsoleCursorPosition({ 0, 0 });

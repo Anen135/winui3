@@ -18,7 +18,7 @@ public:
     void drawContent() {
         std::wstring displayText = checked ? L"[X] " : L"[ ] ";
         displayText += text;
-        WriteConsoleOutputCharacterW(hout, displayText.c_str(), displayText.size(), { (SHORT)(rect.Left + 1), (SHORT)((rect.Top + rect.Bottom) / 2) }, &written);
+        WriteConsoleOutputCharacterW(hout, displayText.c_str(), displayText.size(), { (SHORT)(rect.Left + 1), (SHORT)((rect.Top + rect.Bottom) / 2) }, &dump);
     }
 
     void draw() override {

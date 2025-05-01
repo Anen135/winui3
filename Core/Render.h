@@ -2,11 +2,12 @@
 #include <windows.h>
 class Render {
 public:
-    HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
+    inline static HANDLE hout { GetStdHandle(STD_OUTPUT_HANDLE) };
     WORD attr {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE};
-    DWORD written;
+    inline static DWORD dump {0};
+    static CONSOLE_SCREEN_BUFFER_INFO csbi;
 
-    void DrawBox(SMALL_RECT rect) {
+    void DrawBox(SMALL_RECT& rect) {
         // Unicode Box Drawing characters
         #define hline   L"\u2500"  // ─
         #define vline   L"\u2502"  // │
@@ -14,16 +15,16 @@ public:
         #define tr L"\u2510" // ┐
         #define bl L"\u2514" // └
         #define br L"\u2518" // ┘
-        WriteConsoleOutputCharacterW(hout, tl, 1, { rect.Left, rect.Top }, &written);
-        for (SHORT x = rect.Left + 1; x < rect.Right; x++) WriteConsoleOutputCharacterW(hout, hline, 1, { x, rect.Top }, &written);
-        WriteConsoleOutputCharacterW(hout, tr, 1, { rect.Right, rect.Top }, &written);
+        WriteConsoleOutputCharacterW(hout, tl, 1, { rect.Left, rect.Top }, &dump);
+        for (SHORT x = rect.Left + 1; x < rect.Right; x++) WriteConsoleOutputCharacterW(hout, hline, 1, { x, rect.Top }, &dump);
+        WriteConsoleOutputCharacterW(hout, tr, 1, { rect.Right, rect.Top }, &dump);
         for (SHORT y = rect.Top + 1; y < rect.Bottom; y++) {
-            WriteConsoleOutputCharacterW(hout, vline, 1, { rect.Left, y }, &written);
-            WriteConsoleOutputCharacterW(hout, vline, 1, { rect.Right, y }, &written);
+            WriteConsoleOutputCharacterW(hout, vline, 1, { rect.Left, y }, &dump);
+            WriteConsoleOutputCharacterW(hout, vline, 1, { rect.Right, y }, &dump);
         }
-        WriteConsoleOutputCharacterW(hout, bl, 1, { rect.Left, rect.Bottom }, &written);
-        for (SHORT x = rect.Left + 1; x < rect.Right; x++) WriteConsoleOutputCharacterW(hout, hline, 1, { x, rect.Bottom }, &written);
-        WriteConsoleOutputCharacterW(hout, br, 1, { rect.Right, rect.Bottom }, &written);
+        WriteConsoleOutputCharacterW(hout, bl, 1, { rect.Left, rect.Bottom }, &dump);
+        for (SHORT x = rect.Left + 1; x < rect.Right; x++) WriteConsoleOutputCharacterW(hout, hline, 1, { x, rect.Bottom }, &dump);
+        WriteConsoleOutputCharacterW(hout, br, 1, { rect.Right, rect.Bottom }, &dump);
         #undef hline
         #undef vline
         #undef tl
@@ -32,15 +33,40 @@ public:
         #undef br
     }
 
-    void fillBox(SMALL_RECT rect) {
+    void fillBox(SMALL_RECT& rect) {
         for (SHORT y = rect.Top; y <= rect.Bottom; y++) {
             for (SHORT x = rect.Left; x <= rect.Right; x++) {
-                FillConsoleOutputAttribute(hout, attr, 1, { x, y }, &written);
-                WriteConsoleOutputCharacterW(hout, L" ", 1, { x, y }, &written);
+                FillConsoleOutputAttribute(hout, attr, 1, { x, y }, &dump);
+                WriteConsoleOutputCharacterW(hout, L" ", 1, { x, y }, &dump);
             }
         }
     }
+
+    static void clearScreen() {
+        GetConsoleScreenBufferInfo(hout, &csbi);
+        FillConsoleOutputAttribute(hout, csbi.wAttributes, csbi.dwSize.X * csbi.dwSize.Y, { 0, 0 }, &dump);
+        FillConsoleOutputCharacter(hout, (TCHAR)' ', csbi.dwSize.X * csbi.dwSize.Y, { 0, 0 }, &dump);
+        SetConsoleCursorPosition(hout, { 0, 0 });
+    }
+
+    static void updateConsoleBufferSize(COORD dsize) {
+        GetConsoleScreenBufferInfo(hout, &csbi);
+        SMALL_RECT sr = { 0, 0, csbi.dwSize.X + 1, csbi.dwSize.Y + 1 };
+        SetConsoleScreenBufferSize(hout, dsize);
+        SetConsoleWindowInfo(hout, true, &sr);
+    }
+
+  
+
     // Расчёт центрирования текста
-    inline void drawTextCentered(const std::wstring& text, const SMALL_RECT& rect) { WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + ((rect.Right - rect.Left + 1 - text.size()) / 2)), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &written); }
-    inline void drawTextLeft(const std::wstring& text, const SMALL_RECT& rect) { WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + 1), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &written); }
+    inline void drawTextCentered(const std::wstring& text, const SMALL_RECT& rect) { 
+        if (rect.Right - rect.Left < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
+        else WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + ((rect.Right - rect.Left + 1 - text.size()) / 2)), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump); 
+    }
+    inline void drawTextLeft(const std::wstring& text, const SMALL_RECT& rect) { 
+        if (rect.Right - rect.Left < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
+        else WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + 1), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump); 
+    }
 };
+
+CONSOLE_SCREEN_BUFFER_INFO Render::csbi; 

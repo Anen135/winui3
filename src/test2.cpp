@@ -12,7 +12,6 @@
 #include "Control.h"
 #include "../BasicElements/FiButton.h"
 #include "../BasicElements/Label.h"
-#include "../BasicElements/CheckBox.h"
 
 class CalculatorForm {
     std::shared_ptr<Label> display;
@@ -153,7 +152,7 @@ private:
     }
 };
 
-void FocusChanger(const KEY_EVENT_RECORD& ker) {
+void KeyHandler(const KEY_EVENT_RECORD& ker) {
     if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) {
         FocusManager::nextFocus();
     }
@@ -172,7 +171,7 @@ int main() {
     calc.draw();
 
     auto& eventManager = EventManager::getInstance();
-    eventManager.addHandler<KEY_EVENT_RECORD>(FocusChanger);
+    eventManager.addHandler<KEY_EVENT_RECORD>(KeyHandler);
     eventManager.start();
 
     InputState::setConsoleCursorPosition({ 0, 0 });

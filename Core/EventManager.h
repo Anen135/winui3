@@ -8,6 +8,9 @@
 #include <mutex>
 #include <algorithm>
 
+template<typename T>
+using HandlerPtr = std::shared_ptr<std::function<void(const T&)>>;
+
 class EventManager {
 private:
     std::thread eventThread;
@@ -17,12 +20,12 @@ private:
     template <typename T>
     class HandlerContainer {
     private:
-        std::vector<std::shared_ptr<std::function<void(const T&)>>> handlers;
+        std::vector<HandlerPtr<T>> handlers;
         mutable std::mutex mutex;
 
     public:
         // Добавление обработчика
-        std::shared_ptr<std::function<void(const T&)>> addHandler(std::function<void(const T&)> handler) {
+        HandlerPtr<T> addHandler(std::function<void(const T&)> handler) {
             std::lock_guard lock(mutex); 
             auto handlerPtr = std::make_shared<std::function<void(const T&)>>(handler);
             handlers.push_back(handlerPtr);
@@ -35,7 +38,7 @@ private:
         }
 
         // Удаление обработчика по указателю
-        bool removeHandler(const std::shared_ptr<std::function<void(const T&)>>& handlerPtr) {
+        bool removeHandler(const HandlerPtr<T>& handlerPtr) {
             std::lock_guard lock(mutex); // Блокируем мьютекс для записи
             auto it = std::find_if(handlers.begin(), handlers.end(), [&handlerPtr](const auto& ptr) {
                 return ptr == handlerPtr; // Сравниваем указатели
@@ -49,7 +52,7 @@ private:
 
         // Вызов всех обработчиков
         void invokeHandlers(const T& event) const {
-            std::vector<std::shared_ptr<std::function<void(const T&)>>> handlersCopy;
+            std::vector<HandlerPtr<T>> handlersCopy;
             {
                 std::lock_guard lock(mutex);
                 handlersCopy = handlers; // Копируем все обработчики при захваченном мьютексе
@@ -73,7 +76,7 @@ private:
     HandlerContainer<INPUT_RECORD> inputHandlers; // Пользователь хочет получать все события
 
     EventManager() : running(false) {}
-    ~EventManager() { if (running) stop(); }
+    ~EventManager() { if (running) stop();}
 
     // Основной цикл обработки событий
         void eventLoop() {
@@ -135,7 +138,7 @@ public:
 
     // Добавление обработчиков для каждого типа событий
     template <typename T>
-    inline std::shared_ptr<std::function<void(const T&)>> addHandler(std::function<void(const T&)> handler) {
+    inline HandlerPtr<T> addHandler(std::function<void(const T&)> handler) {
         if constexpr (std::is_same_v<T, KEY_EVENT_RECORD>) {
             return keyHandlers.addHandler(handler);
         } else if constexpr (std::is_same_v<T, MOUSE_EVENT_RECORD>) {
@@ -152,7 +155,7 @@ public:
     }
 
     template <typename T>
-    inline bool removeHandler(const std::shared_ptr<std::function<void(const T&)>>& handlerPtr) {
+    inline bool removeHandler(const HandlerPtr<T>& handlerPtr) {
         if constexpr (std::is_same_v<T, KEY_EVENT_RECORD>) {
             return keyHandlers.removeHandler(handlerPtr);
         } else if constexpr (std::is_same_v<T, MOUSE_EVENT_RECORD>) {
