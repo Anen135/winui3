@@ -51,7 +51,7 @@ public:
 
     static void updateConsoleBufferSize(COORD dsize) {
         GetConsoleScreenBufferInfo(hout, &csbi);
-        SMALL_RECT sr = { 0, 0, csbi.dwSize.X + 1, csbi.dwSize.Y + 1 };
+        SMALL_RECT sr = { 0, 0, static_cast<short>(csbi.dwSize.X + 1), static_cast<short>(csbi.dwSize.Y + 1) };
         SetConsoleScreenBufferSize(hout, dsize);
         SetConsoleWindowInfo(hout, true, &sr);
     }
@@ -60,11 +60,11 @@ public:
 
     // Расчёт центрирования текста
     inline void drawTextCentered(const std::wstring& text, const SMALL_RECT& rect) { 
-        if (rect.Right - rect.Left < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
+        if (static_cast<size_t>(rect.Right - rect.Left) < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
         else WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + ((rect.Right - rect.Left + 1 - text.size()) / 2)), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump); 
     }
     inline void drawTextLeft(const std::wstring& text, const SMALL_RECT& rect) { 
-        if (rect.Right - rect.Left < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
+        if (static_cast<size_t>(rect.Right - rect.Left) < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
         else WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + 1), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump); 
     }
 };

@@ -1,2 +1,7 @@
 *.exe
 /build
+.vscode/
+/exe
+/.vscode
+/.vscode//
+/\.vscode

@@ -47,15 +47,6 @@ public:
             self->onMouse(mer);
         });
     }
-
-    void initBackHandler() {
-        auto self = shared_from_this();
-        if (handler) EventManager::getInstance().removeHandler<MOUSE_EVENT_RECORD>(handler);
-        handler = EventManager::getInstance().addHandler<MOUSE_EVENT_RECORD>([self](const MOUSE_EVENT_RECORD& mer) {
-            self->onBack(mer);
-        });
-    }
-
     ~FileButton() {
         EventManager::getInstance().removeHandler<MOUSE_EVENT_RECORD>(handler);
     }
@@ -77,23 +68,23 @@ public:
         Control::onMouse(mer);
         if (hovered && (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)) {
             FocusManager::focusControl(this);
-            if (type == 2) {
-                currentPath = fs::absolute(fs::path(currentPath).parent_path()).wstring();
-                loadDirectory(currentPath);
-            } else if (type) {
-                currentPath = fs::absolute(fs::path(currentPath) / name).wstring();
-                loadDirectory(currentPath);
-            } else {
-                ShellExecuteW(NULL, L"open", (fs::path(currentPath) / name).c_str(), NULL, NULL, SW_SHOW);
-            }
+            action();
         }
     }
 
-    void onBack(const MOUSE_EVENT_RECORD& mer) {
-        Control::onMouse(mer);
-        if (hovered && (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)) {
-            FocusManager::focusControl(this);
-            
+    void action() override {
+        switch (type) {
+            case 0:
+                ShellExecuteW(NULL, L"open", (fs::path(currentPath) / name).c_str(), NULL, NULL, SW_SHOW);
+            break;
+            case 1: 
+                currentPath = fs::absolute(fs::path(currentPath) / name).wstring();
+                loadDirectory(currentPath);
+            break;
+            case 2:
+                currentPath = fs::absolute(fs::path(currentPath).parent_path()).wstring();
+                loadDirectory(currentPath);
+            break;
         }
     }
 };
@@ -105,7 +96,7 @@ void redrawCurrentPage() {
 
     Render::clearScreen();
     FocusManager::clearControls();  
-    EventManager::getInstance().clearHandlers<MOUSE_EVENT_RECORD>(); 
+    EventManager::getInstance().clearAllHandlers<MOUSE_EVENT_RECORD>(); 
 
     int start = currentPage * maxButtonsPerPage;
     int end = std::min(start + maxButtonsPerPage, (int)allButtons.size());
@@ -119,10 +110,13 @@ void redrawCurrentPage() {
     }
     currentPathLabel->text = currentPath;
     pageLabel->text = std::to_wstring(currentPage) + L" / " + std::to_wstring(allButtons.size() / maxButtonsPerPage);
-    FocusManager::registerControl(currentPathLabel);
-    FocusManager::registerControl(pageHelpLabel);
-    FocusManager::registerControl(helpLabel);
-    FocusManager::registerControl(pageLabel);
+
+    if (currentPathLabel->rect.Right < Render::csbi.dwSize.X - 5) {
+        FocusManager::registerControl(currentPathLabel);
+        FocusManager::registerControl(pageHelpLabel);
+        FocusManager::registerControl(helpLabel);
+        FocusManager::registerControl(pageLabel);
+    }
     FocusManager::nextFocus();  // Переключить фокус на первую кнопку
     FocusManager::redrawAll();  // Перерисовать все элементы управления
 }  
@@ -143,6 +137,8 @@ void KeyHandler(const KEY_EVENT_RECORD& ker) {
     if (ker.bKeyDown) {
         if (ker.wVirtualKeyCode == VK_TAB) {
             FocusManager::nextFocus();
+        } else if (ker.wVirtualKeyCode == VK_SPACE) {
+            FocusManager::getFocused()->action();
         } else if (ker.wVirtualKeyCode == VK_F9) { // PageUp
             if (currentPage > 0) {
                 currentPage--;

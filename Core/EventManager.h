@@ -4,9 +4,8 @@
 #include <vector>
 #include <functional>
 #include <Windows.h>
-#include <shared_mutex>
-#include <mutex>
 #include <algorithm>
+#include "HandlerContainerShared.h"
 
 template<typename T>
 using HandlerPtr = std::shared_ptr<std::function<void(const T&)>>;
@@ -15,56 +14,7 @@ class EventManager {
 private:
     std::thread eventThread;
     std::atomic<bool> running;
-
-    // Шаблонный класс для хранения обработчиков и их мьютекса
-    template <typename T>
-    class HandlerContainer {
-    private:
-        std::vector<HandlerPtr<T>> handlers;
-        mutable std::mutex mutex;
-
-    public:
-        // Добавление обработчика
-        HandlerPtr<T> addHandler(std::function<void(const T&)> handler) {
-            std::lock_guard lock(mutex); 
-            auto handlerPtr = std::make_shared<std::function<void(const T&)>>(handler);
-            handlers.push_back(handlerPtr);
-            return handlerPtr; 
-        }
-
-        void clearHandlers() {
-            std::lock_guard lock(mutex);
-            handlers.clear();
-        }
-
-        // Удаление обработчика по указателю
-        bool removeHandler(const HandlerPtr<T>& handlerPtr) {
-            std::lock_guard lock(mutex); // Блокируем мьютекс для записи
-            auto it = std::find_if(handlers.begin(), handlers.end(), [&handlerPtr](const auto& ptr) {
-                return ptr == handlerPtr; // Сравниваем указатели
-            });
-            if (it != handlers.end()) {
-                handlers.erase(it); // Удаляем обработчик
-                return true; // Успешно удалено
-            }
-            return false; // Обработчик не найден
-        }
-
-        // Вызов всех обработчиков
-        void invokeHandlers(const T& event) const {
-            std::vector<HandlerPtr<T>> handlersCopy;
-            {
-                std::lock_guard lock(mutex);
-                handlersCopy = handlers; // Копируем все обработчики при захваченном мьютексе
-            }
-
-            for (const auto& handler : handlersCopy) {
-                (*handler)(event); // Вызываем без захваченного мьютекса
-            }
-        }
-
-    };
-
+    static EventManager instance;
 
 
     // Контейнеры для каждого типа событий winAPI, другие не нужны.
@@ -79,12 +29,11 @@ private:
     ~EventManager() { if (running) stop();}
 
     // Основной цикл обработки событий
-        void eventLoop() {
+    void eventLoop() {
         HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-        if (hInput == INVALID_HANDLE_VALUE) {
-            return;
-        }
+        if (hInput == INVALID_HANDLE_VALUE) return;
 
+        // Цикл обработки событий
         while (running) {
             INPUT_RECORD inputRecords[128];
             DWORD eventsRead;
@@ -99,23 +48,21 @@ private:
                 switch (inputRecords[i].EventType) {
                     case KEY_EVENT:
                         keyHandlers.invokeHandlers(inputRecords[i].Event.KeyEvent);
-                        break;
+                    break;
                     case MOUSE_EVENT:
                         mouseHandlers.invokeHandlers(inputRecords[i].Event.MouseEvent);
-                        break;
+                    break;
                     case FOCUS_EVENT:
                         focusHandlers.invokeHandlers(inputRecords[i].Event.FocusEvent);
-                        break;
+                    break;
                     case MENU_EVENT:
                         menuHandlers.invokeHandlers(inputRecords[i].Event.MenuEvent);
-                        break;
+                    break;
                     case WINDOW_BUFFER_SIZE_EVENT:
                         windowBufferSizeHandlers.invokeHandlers(inputRecords[i].Event.WindowBufferSizeEvent);
-                        break;
-                    default:
-                        inputHandlers.invokeHandlers(inputRecords[i]);
-                        break;
+                    break;
                 }
+                // inputHandlers.invokeHandlers(inputRecords[i]);
             }
         }
     }
@@ -123,11 +70,10 @@ private:
 public:
     // Получение экземпляра менеджера событий (Singleton)
     static EventManager& getInstance() {
-        static EventManager instance;
         return instance;
     }
 
-    void clearHandlers() {
+    void clearAllHandlers() {
         keyHandlers.clearHandlers();
         mouseHandlers.clearHandlers();
         focusHandlers.clearHandlers();
@@ -172,7 +118,7 @@ public:
     }
 
     template <typename T>
-    inline void clearHandlers() {
+    inline void clearAllHandlers() {
         if constexpr (std::is_same_v<T, KEY_EVENT_RECORD>) {
             keyHandlers.clearHandlers();
         } else if constexpr (std::is_same_v<T, MOUSE_EVENT_RECORD>) {
@@ -202,3 +148,5 @@ public:
         }
     }
 };
+
+EventManager EventManager::instance;

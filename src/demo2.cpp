@@ -10,7 +10,7 @@
 #include "InputState.h"
 #include "FocusManager.h"
 #include "Control.h"
-#include "../BasicElements/FiButton.h"
+#include "../BasicElements/FIButton.h"
 #include "../BasicElements/Label.h"
 
 class CalculatorForm {
@@ -41,7 +41,7 @@ public:
             SHORT top = startY + row * (buttonHeight + 1);
             SMALL_RECT r = { left, top, left + buttonWidth, top + buttonHeight };
 
-            auto btn = std::make_shared<FiButton>(r, layout[i]);
+            auto btn = std::make_shared<FIButton>(r, layout[i]);
 
             btn->onClick = [this, text = layout[i]]() {
                 this->onButtonClick(text);

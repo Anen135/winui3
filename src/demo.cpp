@@ -1,3 +1,4 @@
+#define UNICODE
 #include <windows.h>
 #include <iostream>
 #include <memory>
@@ -6,31 +7,30 @@
 #include "FocusManager.h"
 #include "Control.h"
 #include "Render.h"
-#include "../BasicElements/FiButton.h"
-#include "../BasicElements/FiTextBox.h"
+#include "../BasicElements/CFButton.h"
+#include "../BasicElements/CFTextBox.h"
 #include "../BasicElements/CheckBox.h"
 
 // ------------------ Main ------------------
 void KeyHandler(const KEY_EVENT_RECORD& ker) {
-    if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) {
-        FocusManager::nextFocus();
-    }
+    if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) FocusManager::nextFocus();
+    else if (ker.bKeyDown && ker.wVirtualKeyCode == VK_SPACE) FocusManager::getFocused()->action();
 }
 
-void createMessageBox() {
+void CFButton::action() {
     MessageBoxW(NULL, L"Hello, World!", L"Success", MB_OK);
 }
 
-void validatePassword(const std::wstring& password) {
-    if (password == L"password") MessageBoxW(NULL, L"Password is valid!", L"Success", MB_OK);
+void CFTextBox::onEnter() {
+    if (text == L"password") MessageBoxW(NULL, L"Password is valid!", L"Success", MB_OK);
     else MessageBoxW(NULL, L"Password is invalid!", L"Error", MB_ICONERROR);
 }
 
 
 int main() {
     HANDLE hin = GetStdHandle(STD_INPUT_HANDLE);
-    FocusManager::registerControl(std::make_shared<FiButton>(SMALL_RECT{10, 2, 30, 4}, L"Click Me", createMessageBox));
-    FocusManager::registerControl(std::make_shared<FiTextBox>(SMALL_RECT{10, 6, 40, 8}, L"", validatePassword));
+    FocusManager::registerControl(std::make_shared<CFButton>(SMALL_RECT{10, 2, 30, 4}, L"Click Me"));
+    FocusManager::registerControl(std::make_shared<CFTextBox>(SMALL_RECT{10, 6, 40, 8}, L"Enter"));
     FocusManager::registerControl(std::make_shared<CheckBox>(SMALL_RECT{10, 10, 40, 12}, L"Checkbox"));
     FocusManager::nextFocus(); 
     FocusManager::redrawAll();
@@ -48,6 +48,6 @@ int main() {
     while (!InputState::isKeyPressed(VK_ESCAPE)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-
+    SetConsoleMode(hin, mode);
     return 0;
 }

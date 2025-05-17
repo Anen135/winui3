@@ -9,7 +9,7 @@
 #include "FocusManager.h"
 #include "Control.h"
 #include "Render.h"
-#include "../BasicElements/FiButton.h"
+#include "../BasicElements/FIButton.h"
 #include "../BasicElements/TextBox.h"
 #include "../BasicElements/CheckBox.h"
 
@@ -17,13 +17,13 @@ class LoginForm {
     std::shared_ptr<TextBox> loginBox;
     std::shared_ptr<TextBox> passwordBox;
     std::shared_ptr<CheckBox> rememberMeBox;
-    std::shared_ptr<FiButton> loginButton;
+    std::shared_ptr<FIButton> loginButton;
 public:
     void setup() {
         loginBox = std::make_shared<TextBox>(SMALL_RECT{ 10, 4, 50, 6 }, L"Login");
         passwordBox = std::make_shared<TextBox>(SMALL_RECT{ 10, 8, 50, 10 }, L"Password");
         rememberMeBox = std::make_shared<CheckBox>(SMALL_RECT{ 10, 12, 50, 14 }, L"Remember Me");
-        loginButton = std::make_shared<FiButton>(SMALL_RECT{ 20, 16, 40, 18 }, L"Login");
+        loginButton = std::make_shared<FIButton>(SMALL_RECT{ 20, 16, 40, 18 }, L"Login");
 
         loginButton->onClick = [this]() {
             validate();

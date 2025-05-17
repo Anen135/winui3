@@ -1,5 +1,4 @@
 #include "Control.h"
-#include "FocusManager.h"
 
 Control::Control(SMALL_RECT r)
     : rect(r) {}

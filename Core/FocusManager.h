@@ -23,9 +23,8 @@ public:
     }
 
     static void focusControl(Control* ctrl) {
-        if (focusedIndex != -1){
-            controls[focusedIndex]->setFocus(false);
-        }
+        if (focusedIndex != -1) controls[focusedIndex]->setFocus(false);
+        
         auto it = std::find_if(controls.begin(), controls.end(),
                                [ctrl](const std::shared_ptr<Control>& c) { return c.get() == ctrl; });
         if (it != controls.end()) {
@@ -36,21 +35,19 @@ public:
 
     static void nextFocus() {
         if (controls.empty()) return;
-        if (focusedIndex != -1){
-            controls[focusedIndex]->setFocus(false);
-        }
-        if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) {
-            focusedIndex = (focusedIndex + controls.size() - 1) % controls.size();
-        } else {
-            focusedIndex = (focusedIndex + 1) % controls.size();
-        }
+        if (focusedIndex != -1) controls[focusedIndex]->setFocus(false);
+
+        focusedIndex = ((GetKeyState(VK_SHIFT) & 0x8000) != 0) ? ((focusedIndex + controls.size() - 1) % controls.size()) : ((focusedIndex + 1) % controls.size());
         controls[focusedIndex]->setFocus(true);
     }
 
     static void redrawAll() {
-        for (auto& ctrl : controls) {
-            ctrl->draw();
-        }
+        for (auto& ctrl : controls) ctrl->draw();
+    }
+
+    static std::shared_ptr<Control> getFocused() {
+        if (focusedIndex == -1) throw std::runtime_error("No focused control");
+        return controls[focusedIndex];
     }
 
 };

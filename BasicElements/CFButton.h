@@ -2,13 +2,9 @@
 #include "Button.h"
 #include <functional>
 
-class FIButton : public Button {
-std::shared_ptr<std::function<void(const KEY_EVENT_RECORD&)>> handler;
+class CFButton : public Button {
 public:
-    std::function<void()> onClick = nullptr;
-    FIButton(SMALL_RECT r, std::wstring t, std::function<void()> onClick) : Button(r, t), onClick(onClick) {}
-    FIButton(SMALL_RECT r, std::wstring t) : Button(r, t) {}    
-
+    CFButton(SMALL_RECT r, std::wstring t) : Button(r, t) {}
     void onMouse(const MOUSE_EVENT_RECORD& mer) override {
         Control::onMouse(mer);
         if ((mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)) {
@@ -20,8 +16,6 @@ public:
             }
         }
     }
-    void action() override {
-        if (onClick) onClick();
-    }
 
+    virtual void action() override;
 };

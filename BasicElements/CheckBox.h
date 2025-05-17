@@ -5,7 +5,6 @@
 #include "../Core/Render.h"
 // ------------------ CheckBox ------------------
 class CheckBox : public Control, public Render {
-std::shared_ptr<std::function<void(const KEY_EVENT_RECORD&)>> handler;
 public:
     bool checked = false;
     std::wstring text;
@@ -35,40 +34,15 @@ public:
         if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
             if (hovered) {
                 FocusManager::focusControl(this);  
-                checked = !checked;
-                drawContent();
+                action();
             } else {
                 setFocus(false);
             }
         }
     }
 
-    void setFocus(bool f) override {
-        Control::setFocus(f);
-        if (f) {
-            subscribeKeyboard();
-        } else {
-            unsubscribeKeyboard();
-        }   
-    }
-
-    void onKey(const KEY_EVENT_RECORD& ker) {
-        if (ker.bKeyDown && ker.wVirtualKeyCode == VK_SPACE) {
-            checked = !checked;
-            drawContent();
-        }
-    }
-
-    void subscribeKeyboard() {
-        if (handler) return;
-        handler = EventManager::getInstance().addHandler<KEY_EVENT_RECORD>([this](const KEY_EVENT_RECORD & ker) {
-            this->onKey(ker);
-        });
-    }
-
-    void unsubscribeKeyboard() {
-        if (!handler) return;
-        EventManager::getInstance().removeHandler<KEY_EVENT_RECORD>(handler);
-        handler.reset();
+    void action() override {
+        checked = !checked;
+        drawContent();
     }
 };  
