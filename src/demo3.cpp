@@ -103,7 +103,7 @@ void redrawCurrentPage() {
 
     SHORT top = 2;
     for (int i = start; i < end; ++i) {
-        allButtons[i]->rect = SMALL_RECT{5, top, 50, top + 2};
+        allButtons[i]->rect = SMALL_RECT{5, top, 50, static_cast<short>(top + 2)};
         allButtons[i]->initHandlers();  
         FocusManager::registerControl(allButtons[i]);  
         top += buttonHeight;
