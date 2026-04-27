@@ -150,6 +150,10 @@ void KeyHandler(const KEY_EVENT_RECORD& ker) {
                 currentPage++;
                 redrawCurrentPage();
             }
+        } else if (ker.wVirtualKeyCode == VK_UP) {
+            FocusManager::prevFocus();
+        } else if (ker.wVirtualKeyCode == VK_DOWN) {
+            FocusManager::nextFocus();
         }
     }
 }

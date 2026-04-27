@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Задаёт имя проекта (можешь заменить на своё)
-project(demo4)
+project(demo2)
 
 # Задаёт параметры сборки
 set(CMAKE_BUILD_TYPE Release)
@@ -17,14 +17,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wunused-parameter -Wunused-variable")
 file(GLOB_RECURSE SRC_FILES
     ${CMAKE_SOURCE_DIR}/Core/*.cpp
     ${CMAKE_SOURCE_DIR}/BasicElements/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/demo4.cpp
+    ${CMAKE_SOURCE_DIR}/src/demo2.cpp
 )
 
 # Добавление исполняемого файла
-add_executable(demo4 ${SRC_FILES})
+add_executable(demo2 ${SRC_FILES})
 
 # Указываем, где искать заголовки
-target_include_directories(demo4 PUBLIC
+target_include_directories(demo2 PUBLIC
     ${CMAKE_SOURCE_DIR}/Core
     ${CMAKE_SOURCE_DIR}/BasicElements
 )

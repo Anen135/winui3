@@ -57,13 +57,56 @@ public:
         FocusManager::redrawAll();
     }
 
-private:
+    void moveFocus(int dx, int dy) {
+        std::shared_ptr<Control> focused;
+
+        try {
+            focused = FocusManager::getFocused();
+        } catch (const std::runtime_error&) {
+            if (!buttons.empty()) {
+                FocusManager::focusControl(buttons[0].get());
+            }
+            return;
+        }
+
+        if (!focused) return;
+
+        auto it = std::find_if(buttons.begin(), buttons.end(),
+            [focused](const std::shared_ptr<Button>& btn) {
+                return btn.get() == focused.get();
+            });
+
+        if (it == buttons.end()) return;
+
+        int index = std::distance(buttons.begin(), it);
+        int cols = 4;
+        int rows = buttons.size() / cols;
+
+        int newRow = (index / cols + dy + rows) % rows;
+        int newCol = (index % cols + dx + cols) % cols;
+        int newIndex = newRow * cols + newCol;
+
+        FocusManager::focusControl(buttons[newIndex].get());
+    }
+    void addNumber(int n) {
+        if (display->text == L"0") display->text = std::to_wstring(n);
+        else display->text += std::to_wstring(n);
+        display->updateText();
+    } 
     void onButtonClick(const std::wstring& value) {
         if (value == L"=") {
             calculate();
             return;
         }
 
+        if (value == L"<") {
+            if (!display->text.empty()) {
+                display->text.pop_back();
+                if (display->text.empty()) display->text = L"0";
+            }
+            display->draw();
+            return;
+        }
         if (display->text == L"0")
             display->text = value;
         else
@@ -71,6 +114,7 @@ private:
 
         display->updateText();
     }
+private:
 
     void calculate() {
         try {
@@ -152,8 +196,8 @@ private:
     }
 };
 
-void KeyHandler(const KEY_EVENT_RECORD& ker) {
-    if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) {
+void KeyHandler(const KEY_EVENT_RECORD& key) {
+    if (key.bKeyDown && key.wVirtualKeyCode == VK_TAB) {
         FocusManager::nextFocus();
     }
 }
@@ -172,6 +216,45 @@ int main() {
 
     auto& eventManager = EventManager::getInstance();
     eventManager.addHandler<KEY_EVENT_RECORD>(KeyHandler);
+    eventManager.addHandler<KEY_EVENT_RECORD>([&calc](const KEY_EVENT_RECORD& key) {
+        if (key.bKeyDown) {
+            switch (key.wVirtualKeyCode) {
+                case VK_UP:    calc.moveFocus(0, -1); break;
+                case VK_DOWN:  calc.moveFocus(0, 1); break;
+                case VK_LEFT:  calc.moveFocus(-1, 0); break;
+                case VK_RIGHT: calc.moveFocus(1, 0); break;
+                case VK_NUMPAD1: calc.onButtonClick(L"1"); break;
+                case VK_NUMPAD2: calc.onButtonClick(L"2"); break;
+                case VK_NUMPAD3: calc.onButtonClick(L"3"); break;
+                case VK_NUMPAD4: calc.onButtonClick(L"4"); break;
+                case VK_NUMPAD5: calc.onButtonClick(L"5"); break;
+                case VK_NUMPAD6: calc.onButtonClick(L"6"); break;
+                case VK_NUMPAD7: calc.onButtonClick(L"7"); break;
+                case VK_NUMPAD8: calc.onButtonClick(L"8"); break;
+                case VK_NUMPAD9: calc.onButtonClick(L"9"); break;
+                case VK_NUMPAD0: calc.onButtonClick(L"0"); break;
+                case VK_DECIMAL: calc.onButtonClick(L"."); break;
+                case VK_RETURN: calc.onButtonClick(L"="); break;
+                case VK_DIVIDE: calc.onButtonClick(L"/"); break;
+                case VK_MULTIPLY: calc.onButtonClick(L"*"); break;
+                case VK_SUBTRACT: calc.onButtonClick(L"-"); break;
+                case VK_ADD: calc.onButtonClick(L"+"); break;
+                case VK_BACK: calc.onButtonClick(L"<"); break;
+                case '1': calc.onButtonClick(L"1"); break;
+                case '2': calc.onButtonClick(L"2"); break;
+                case '3': calc.onButtonClick(L"3"); break;
+                case '4': calc.onButtonClick(L"4"); break;
+                case '5': calc.onButtonClick(L"5"); break;
+                case '6': calc.onButtonClick(L"6"); break;
+                case '7': calc.onButtonClick(L"7"); break;
+                case '8': calc.onButtonClick(L"8"); break;
+                case '9': calc.onButtonClick(L"9"); break;
+                case '0': calc.onButtonClick(L"0"); break;
+                case '.': calc.onButtonClick(L"."); break;
+                case '=': calc.onButtonClick(L"="); break;
+            }
+        }
+    });
     eventManager.start();
 
     InputState::setConsoleCursorPosition({ 0, 0 });

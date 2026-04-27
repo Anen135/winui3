@@ -1,4 +1,6 @@
 *.exe
 /build
+/out
 .vscode/
 /exe
+CMakePresets.json

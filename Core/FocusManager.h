@@ -41,6 +41,14 @@ public:
         controls[focusedIndex]->setFocus(true);
     }
 
+    static void prevFocus() {
+        if (controls.empty()) return;
+        if (focusedIndex != -1) controls[focusedIndex]->setFocus(false);
+
+        focusedIndex = ((GetKeyState(VK_SHIFT) & 0x8000) != 0) ? ((focusedIndex + controls.size() + 1) % controls.size()) : ((focusedIndex - 1) % controls.size());
+        controls[focusedIndex]->setFocus(true);
+    }
+
     static void redrawAll() {
         for (auto& ctrl : controls) ctrl->draw();
     }
