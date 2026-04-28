@@ -196,9 +196,49 @@ private:
     }
 };
 
-void KeyHandler(const KEY_EVENT_RECORD& key) {
-    if (key.bKeyDown && key.wVirtualKeyCode == VK_TAB) {
+void KeyHandler(const KEY_EVENT_RECORD& ker) {
+    if (ker.bKeyDown && ker.wVirtualKeyCode == VK_TAB) {
         FocusManager::nextFocus();
+    }
+}
+
+void CalcHandler(const KEY_EVENT_RECORD& ker, CalculatorForm& calc) {
+    if (ker.bKeyDown) {
+        switch (ker.wVirtualKeyCode) {
+            case VK_UP:    calc.moveFocus(0, -1); break;
+            case VK_DOWN:  calc.moveFocus(0, 1); break;
+            case VK_LEFT:  calc.moveFocus(-1, 0); break;
+            case VK_RIGHT: calc.moveFocus(1, 0); break;
+            case VK_NUMPAD1: calc.onButtonClick(L"1"); break;
+            case VK_NUMPAD2: calc.onButtonClick(L"2"); break;
+            case VK_NUMPAD3: calc.onButtonClick(L"3"); break;
+            case VK_NUMPAD4: calc.onButtonClick(L"4"); break;
+            case VK_NUMPAD5: calc.onButtonClick(L"5"); break;
+            case VK_NUMPAD6: calc.onButtonClick(L"6"); break;
+            case VK_NUMPAD7: calc.onButtonClick(L"7"); break;
+            case VK_NUMPAD8: calc.onButtonClick(L"8"); break;
+            case VK_NUMPAD9: calc.onButtonClick(L"9"); break;
+            case VK_NUMPAD0: calc.onButtonClick(L"0"); break;
+            case VK_DECIMAL: calc.onButtonClick(L"."); break;
+            case VK_RETURN: calc.onButtonClick(L"="); break;
+            case VK_DIVIDE: calc.onButtonClick(L"/"); break;
+            case VK_MULTIPLY: calc.onButtonClick(L"*"); break;
+            case VK_SUBTRACT: calc.onButtonClick(L"-"); break;
+            case VK_ADD: calc.onButtonClick(L"+"); break;
+            case VK_BACK: calc.onButtonClick(L"<"); break;
+            case '1': calc.onButtonClick(L"1"); break;
+            case '2': calc.onButtonClick(L"2"); break;
+            case '3': calc.onButtonClick(L"3"); break;
+            case '4': calc.onButtonClick(L"4"); break;
+            case '5': calc.onButtonClick(L"5"); break;
+            case '6': calc.onButtonClick(L"6"); break;
+            case '7': calc.onButtonClick(L"7"); break;
+            case '8': calc.onButtonClick(L"8"); break;
+            case '9': calc.onButtonClick(L"9"); break;
+            case '0': calc.onButtonClick(L"0"); break;
+            case '.': calc.onButtonClick(L"."); break;
+            case '=': calc.onButtonClick(L"="); break;
+        }
     }
 }
 
@@ -216,45 +256,7 @@ int main() {
 
     auto& eventManager = EventManager::getInstance();
     eventManager.addHandler<KEY_EVENT_RECORD>(KeyHandler);
-    eventManager.addHandler<KEY_EVENT_RECORD>([&calc](const KEY_EVENT_RECORD& key) {
-        if (key.bKeyDown) {
-            switch (key.wVirtualKeyCode) {
-                case VK_UP:    calc.moveFocus(0, -1); break;
-                case VK_DOWN:  calc.moveFocus(0, 1); break;
-                case VK_LEFT:  calc.moveFocus(-1, 0); break;
-                case VK_RIGHT: calc.moveFocus(1, 0); break;
-                case VK_NUMPAD1: calc.onButtonClick(L"1"); break;
-                case VK_NUMPAD2: calc.onButtonClick(L"2"); break;
-                case VK_NUMPAD3: calc.onButtonClick(L"3"); break;
-                case VK_NUMPAD4: calc.onButtonClick(L"4"); break;
-                case VK_NUMPAD5: calc.onButtonClick(L"5"); break;
-                case VK_NUMPAD6: calc.onButtonClick(L"6"); break;
-                case VK_NUMPAD7: calc.onButtonClick(L"7"); break;
-                case VK_NUMPAD8: calc.onButtonClick(L"8"); break;
-                case VK_NUMPAD9: calc.onButtonClick(L"9"); break;
-                case VK_NUMPAD0: calc.onButtonClick(L"0"); break;
-                case VK_DECIMAL: calc.onButtonClick(L"."); break;
-                case VK_RETURN: calc.onButtonClick(L"="); break;
-                case VK_DIVIDE: calc.onButtonClick(L"/"); break;
-                case VK_MULTIPLY: calc.onButtonClick(L"*"); break;
-                case VK_SUBTRACT: calc.onButtonClick(L"-"); break;
-                case VK_ADD: calc.onButtonClick(L"+"); break;
-                case VK_BACK: calc.onButtonClick(L"<"); break;
-                case '1': calc.onButtonClick(L"1"); break;
-                case '2': calc.onButtonClick(L"2"); break;
-                case '3': calc.onButtonClick(L"3"); break;
-                case '4': calc.onButtonClick(L"4"); break;
-                case '5': calc.onButtonClick(L"5"); break;
-                case '6': calc.onButtonClick(L"6"); break;
-                case '7': calc.onButtonClick(L"7"); break;
-                case '8': calc.onButtonClick(L"8"); break;
-                case '9': calc.onButtonClick(L"9"); break;
-                case '0': calc.onButtonClick(L"0"); break;
-                case '.': calc.onButtonClick(L"."); break;
-                case '=': calc.onButtonClick(L"="); break;
-            }
-        }
-    });
+    eventManager.addHandler<KEY_EVENT_RECORD>([&calc](const KEY_EVENT_RECORD& ker) { CalcHandler(ker, calc); });
     eventManager.start();
 
     InputState::setConsoleCursorPosition({ 0, 0 });

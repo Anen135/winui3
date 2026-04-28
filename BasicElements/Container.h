@@ -9,20 +9,18 @@
 class Container : public Control, public Render {
 public:
     std::vector<std::shared_ptr<Control>> controls;
-    bool hasbox = true;
+    bool bordered {true};
 
     enum LayoutDirection { Vertical = 0, Horizontal = 1 };
     enum Alignment { Start = 0, Center = 1, End = 2 };
 
     unsigned short direction;
-    short spacing = 1;
+    short spacing {1};
     SMALL_RECT padding = { 0, 0, 0, 0 };
-    Alignment alignment = Start;
+    Alignment alignment { Start };
 
-    Container(SMALL_RECT r, unsigned short d = Vertical)
-        : Control(r), direction(d) {}
-    Container(SMALL_RECT r, LayoutDirection d, std::vector<std::shared_ptr<Control>> c)
-        : Control(r), direction(d), controls(c) {}
+    Container(SMALL_RECT r, unsigned short d = Vertical) : Control(r), direction(d) {}
+    Container(SMALL_RECT r, LayoutDirection d, std::vector<std::shared_ptr<Control>> c, Alignment a = Start) : Control(r), direction(d), controls(c), alignment(a) {}
 
     void addControl(const std::shared_ptr<Control>& ctrl) {
         controls.push_back(ctrl);
@@ -80,7 +78,7 @@ public:
 
     void draw() override {
         Render::fillBox(rect);
-        if (hasbox) Render::DrawBox(rect);
+        if (bordered) Render::DrawBox(rect);
         for (auto& ctrl : controls) ctrl->draw();
     }
 };
