@@ -1,6 +1,7 @@
 #pragma once
 #include "Container.h"
 #include <algorithm>
+#define DEMO
 
 class ScrollContainer : public Container {
 public:
