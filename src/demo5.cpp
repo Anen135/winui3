@@ -10,14 +10,14 @@
 #include "../BasicElements/ScrollContainer.h"
 #include "../BasicElements/Container.h"
 #include "../BasicElements/Label.h"
-#define VERSION "1.5"
+#define VERSION "1.7"
 
 
 class CharacterElement : public Control, public Render {
 public:
     wchar_t character;
     CharacterElement(SMALL_RECT r, wchar_t c) : Control(r) { character = c; }
-    bool bordered {false};
+    bool bordered {true};
     void draw() override {
         if (bordered) Render::DrawBox(rect);
 
@@ -41,8 +41,6 @@ int main() {
     root.padding = { 1, 1, 1, 1 };
 
     auto l = std::make_shared<Label>(SMALL_RECT{ 0, 0, 20, 3 }, L"Scroll the container with mouse wheel", 3);
-    root.addControl(l);
-    root.rearrangeControls();
 
     auto& eventManager = EventManager::getInstance();
     eventManager.addHandler<MOUSE_EVENT_RECORD>([&root, &l](const MOUSE_EVENT_RECORD& mer) {
@@ -51,8 +49,7 @@ int main() {
             SHORT delta = HIWORD(mer.dwButtonState);
             short steps = static_cast<short>(delta / WHEEL_DELTA);
             l->text = L"Scrolled " + std::to_wstring(steps) + L" steps (total offset: " + std::to_wstring(root.scrollOffset) + L")";
-            l->updateText();
-            root.scroll(steps);
+            root.scroll(-steps);
             return;
         }
 
@@ -74,29 +71,12 @@ int main() {
 
     const int charWidth{3}, charHeight{2}, charsPerRow{6};
     for (unsigned short r{0}, chari{0}; r < 10; r++) {
-        auto elems = std::vector<std::shared_ptr<Control>> {
-            std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++),
-            std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++),
-            std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++),
-            std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++),
-            std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++),
-            std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++),
-        };
-
-        auto row = std::make_shared<Container>(
-            SMALL_RECT{ 0, 0, charWidth * charsPerRow, charHeight },
-            Container::Horizontal,
-            elems,
-            Container::Center
-        );
-
-        row->padding.Top = 1;
-        root.addControl(row);
-        root.rearrangeControls();
-        row->rearrangeControls();
+        auto element = std::make_shared<CharacterElement>(SMALL_RECT{ 0, 0, charWidth, charHeight }, L'A' + chari++);
+        root.addControl(element);
     }
-
-    root.captureBaseLayout();   // вот это важно: база фиксируется ПОСЛЕ сборки всех детей
+    root.addControl(l);
+    root.rearrangeControls();
+    root.captureBaseLayout();
     root.draw();
 
     InputState::setConsoleCursorPosition({0, 0});

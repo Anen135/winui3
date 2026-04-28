@@ -1,43 +1,80 @@
-# Указывает минимальную требуемую версию CMake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
-# Задаёт имя проекта (можешь заменить на своё)
-project(demo5)
+project(demo5 LANGUAGES CXX)
 
-# Задаёт параметры сборки
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native -flto")
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+# Стандарт
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wunused-parameter -Wunused-variable")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Добавляет все файлы из папки Core и BasicElements
+# Тип сборки по умолчанию
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
+
+# Собираем исходники
 file(GLOB_RECURSE SRC_FILES
     ${CMAKE_SOURCE_DIR}/Core/*.cpp
     ${CMAKE_SOURCE_DIR}/BasicElements/*.cpp
     ${CMAKE_SOURCE_DIR}/src/demo5.cpp
 )
 
-# Добавление исполняемого файла
-add_executable(demo5 ${SRC_FILES}
-    BasicElements/ScrollContainer.h
-    src/demo5.cpp)
+# Исполняемый файл
+add_executable(demo5
+    ${SRC_FILES}
+)
 
-# Указываем, где искать заголовки
-target_include_directories(demo5 PUBLIC
+# Include paths
+target_include_directories(demo5 PRIVATE
     ${CMAKE_SOURCE_DIR}/Core
     ${CMAKE_SOURCE_DIR}/BasicElements
 )
 
+# =========================
+# Компилятор-зависимые флаги
+# =========================
+target_compile_options(demo5 PRIVATE
+    # MSVC
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /W4
+        /permissive-
+    >
 
+    # GCC / Clang
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wunused-parameter
+        -Wunused-variable
+    >
+)
 
-# # Добавляет исполняемый файл. 
-# add_library(winui3 SHARED ${SRC_FILES})
+# =========================
+# Оптимизации (Release)
+# =========================
+target_compile_options(demo5 PRIVATE
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:
+        /O2
+        /GL
+    >
 
-# # Указываем, где искать заголовочные файлы
-# target_include_directories(winui3 PUBLIC
-#     ${CMAKE_SOURCE_DIR}/Core
-#     ${CMAKE_SOURCE_DIR}/BasicElements
-# )
+    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:
+        -O3
+        -march=native
+        -flto
+    >
+)
+
+# Линковка (LTO)
+target_link_options(demo5 PRIVATE
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/LTCG>
+    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-flto>
+)
+
+# Включить IPO если поддерживается
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported)
+if(ipo_supported)
+    set_property(TARGET demo5 PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+endif()

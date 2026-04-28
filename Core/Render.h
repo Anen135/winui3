@@ -33,9 +33,9 @@ public:
         #undef br
     }
 
-    void fillBox(SMALL_RECT& rect) {
-        for (SHORT y = rect.Top; y <= rect.Bottom; y++) {
-            for (SHORT x = rect.Left; x <= rect.Right; x++) {
+    void fillBox(SMALL_RECT& rect, bool withBorder = false) {
+        for (SHORT y = rect.Top + withBorder; y <= rect.Bottom - withBorder; y++) {
+            for (SHORT x = rect.Left + withBorder; x <= rect.Right - withBorder; x++) {
                 FillConsoleOutputAttribute(hout, attr, 1, { x, y }, &dump);
                 WriteConsoleOutputCharacterW(hout, L" ", 1, { x, y }, &dump);
             }
