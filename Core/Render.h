@@ -6,6 +6,7 @@ public:
     WORD attr {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE};
     inline static DWORD dump {0};
     static CONSOLE_SCREEN_BUFFER_INFO csbi;
+    wchar_t fillChar {L' '};
 
     void DrawBox(SMALL_RECT& rect) {
         // Unicode Box Drawing characters
@@ -37,7 +38,7 @@ public:
         for (SHORT y = rect.Top + withBorder; y <= rect.Bottom - withBorder; y++) {
             for (SHORT x = rect.Left + withBorder; x <= rect.Right - withBorder; x++) {
                 FillConsoleOutputAttribute(hout, attr, 1, { x, y }, &dump);
-                WriteConsoleOutputCharacterW(hout, L" ", 1, { x, y }, &dump);
+                WriteConsoleOutputCharacterW(hout, &fillChar, 1, { x, y }, &dump);
             }
         }
     }
@@ -66,6 +67,16 @@ public:
     inline void drawTextLeft(const std::wstring& text, const SMALL_RECT& rect) { 
         if (static_cast<size_t>(rect.Right - rect.Left) < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
         else WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Left + 1), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump); 
+    }
+
+    inline void drawTextRight(const std::wstring& text, const SMALL_RECT& rect) { 
+        if (static_cast<size_t>(rect.Right - rect.Left) < text.size()) WriteConsoleOutputCharacterW(hout, L"...", 3, { static_cast<SHORT>(rect.Left + (rect.Right - rect.Left + 1 - 3) / 2), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump);
+        else WriteConsoleOutputCharacterW(hout, text.c_str(), text.size(), { static_cast<SHORT>(rect.Right - text.size()), static_cast<SHORT>((rect.Top + rect.Bottom) / 2) }, &dump); 
+    }
+
+    inline void drawChar(const COORD& pos, wchar_t ch, WORD color = 0x07) {
+        FillConsoleOutputAttribute(hout, color, 1, pos, &dump);
+        WriteConsoleOutputCharacterW(hout, &ch, 1, pos, &dump);
     }
 };
 

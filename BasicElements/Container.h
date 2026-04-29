@@ -8,13 +8,13 @@
 // ------------------ Container ------------------
 class Container : public Control, public Render {
 public:
-    std::vector<std::shared_ptr<Control>> controls;
     bool bordered {true};
 
     enum LayoutDirection { Vertical = 0, Horizontal = 1 };
     enum Alignment { Start = 0, Center = 1, End = 2 };
 
     unsigned short direction;
+    std::vector<std::shared_ptr<Control>> controls;
     short spacing {1};
     SMALL_RECT padding = { 0, 0, 0, 0 };
     Alignment alignment { Start };
@@ -30,7 +30,7 @@ public:
         controls.erase(std::remove(controls.begin(), controls.end(), ctrl), controls.end());
     }
 
-    void rearrangeControls() {
+    virtual void rearrangeControls() {
         if (controls.empty()) return;
 
         short totalLength = 0;
@@ -39,7 +39,7 @@ public:
                 ? (ctrl->rect.Bottom - ctrl->rect.Top)
                 : (ctrl->rect.Right - ctrl->rect.Left);
         }
-        totalLength += spacing * (controls.size() - 1);
+        totalLength += spacing * static_cast<short>(controls.size() - 1);
 
         short availableLength = (direction == Vertical)
             ? (rect.Bottom - rect.Top - padding.Top - padding.Bottom)

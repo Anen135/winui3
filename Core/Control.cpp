@@ -9,6 +9,7 @@ bool Control::isHovered(const COORD& pos) {
 
 #ifndef DEMO
 void Control::onMouse(const MOUSE_EVENT_RECORD& mer) {
+    if (hidden) return;
     bool wasHovered = hovered;
     hovered = isHovered(mer.dwMousePosition);
     if (hovered != wasHovered) draw();
@@ -17,7 +18,7 @@ void Control::onMouse(const MOUSE_EVENT_RECORD& mer) {
 void Control::onMouse(const MOUSE_EVENT_RECORD& mer) {
     if (isHovered(mer.dwMousePosition) == hovered) return;
     hovered = !hovered;
-    draw();
+    if (!hidden) draw();
 }
 #endif
 
