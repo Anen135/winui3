@@ -1,136 +1,99 @@
 #pragma once
 #include "Container.h"
-#include <algorithm>
-#define DEMO
 
 class ScrollContainer : public Container {
 public:
-    short scrollOffset = 0;
-    short contentLength = 0;
+    short scrollY = 0;
+    short maxScroll = 0;
 
-private:
-    std::vector<SMALL_RECT> baseRects;
-    bool baseLayoutCaptured = false;
-
-public:
-    ScrollContainer(SMALL_RECT r, unsigned short d = Vertical)
-        : Container(r, d) {
+    ScrollContainer(SMALL_RECT r, LayoutDirection d = Vertical) : Container(r, d) {
+        // Выключаем стандартный авто-выравниватель по центру, 
+        // так как скролл обычно подразумевает Start-выравнивание
+        alignment = Start;
     }
 
-    void captureBaseLayout() {
-        if (baseLayoutCaptured) return;
+    void rearrangeControls() override {
+        // Сначала вызываем базовую логику распределения
+        Container::rearrangeControls();
+
+        // Рассчитываем максимальный скролл
+        if (controls.empty()) return;
         
-        baseRects.clear();
-        baseRects.reserve(controls.size());
+        short contentBottom = 0;
+        for (const auto& ctrl : controls) {
+            if (ctrl->rect.Bottom > contentBottom) contentBottom = ctrl->rect.Bottom;
+        }
+
+        short visibleHeight = rect.Bottom - rect.Top - padding.Top - padding.Bottom;
+        short totalHeight = contentBottom - (rect.Top + padding.Top);
+        
+        maxScroll = (std::max)(0, totalHeight - visibleHeight);
+    }
+
+    void onMouse(const MOUSE_EVENT_RECORD& mer) override {
+        // 1. Обработка колесика мыши
+        if (mer.dwEventFlags == MOUSE_WHEELED) {
+            short delta = (short)HIWORD(mer.dwButtonState);
+            if (delta > 0) scrollY = (std::max)(0, scrollY - 1);
+            else scrollY = (std::min)((int)maxScroll, scrollY + 1);
+            return; 
+        }
+
+        // 2. Корректировка координат для дочерних элементов
+        // Создаем копию события с измененными координатами
+        MOUSE_EVENT_RECORD adjustedMer = mer;
+        adjustedMer.dwMousePosition.Y += scrollY; 
 
         for (auto& ctrl : controls) {
-            baseRects.push_back(ctrl->rect);
+            ctrl->onMouse(adjustedMer);
         }
-        
-        baseLayoutCaptured = true;
-    }
-
-    void updateContentLength() {
-        if (!baseLayoutCaptured) {
-            captureBaseLayout();
-        }
-
-        if (baseRects.empty()) {
-            contentLength = 0;
-            return;
-        }
-
-        if (direction == Vertical) {
-            short total = 0;
-            for (auto& r : baseRects) {
-                total += (r.Bottom - r.Top);
-            }
-            total += spacing * static_cast<short>(baseRects.size() - 1);
-            contentLength = total;
-        } else {
-            short maxWidth = 0;
-            for (auto& r : baseRects) {
-                maxWidth = std::max<short>(maxWidth, r.Right - r.Left);
-            }
-            contentLength = maxWidth + spacing * static_cast<short>(baseRects.size() - 1);
-        }
-    }
-
-    void applyScrollToChildren() {
-        if (!baseLayoutCaptured) return;
-        if (baseRects.size() != controls.size()) return;
-
-        for (size_t i = 0; i < controls.size(); ++i) {
-            SMALL_RECT r = baseRects[i];
-
-            if (direction == Vertical) {
-                r.Top -= scrollOffset;
-                r.Bottom -= scrollOffset;
-            } else {
-                r.Left -= scrollOffset;
-                r.Right -= scrollOffset;
-            }
-
-            controls[i]->rect = r;
-        }
-    }
-
-    short getVisibleLength() const {
-        short borderOffset = bordered ? 1 : 0;
-        if (direction == Vertical) {
-            return rect.Bottom - rect.Top - padding.Top - padding.Bottom - borderOffset * 2;
-        } else {
-            return rect.Right - rect.Left - padding.Left - padding.Right - borderOffset * 2;
-        }
-    }
-
-    void scroll(short delta) {
-        updateContentLength();
-
-        short visible = getVisibleLength();
-        short maxScroll = std::max<short>(0, contentLength - visible);
-        scrollOffset = std::clamp<short>(scrollOffset + delta, 0, maxScroll);
-
-        applyScrollToChildren();
-        draw();
     }
 
     void draw() override {
-        Render::fillBox(rect, bordered);
-        if (bordered) {
-            Render::DrawBox(rect);
-        }
+        Render::fillBox(rect);
+        if (bordered) Render::DrawBox(rect);
 
-        applyScrollToChildren();
-
-        short visTop = rect.Top + padding.Top + bordered;
-        short visBottom = rect.Bottom - padding.Bottom - bordered;
-        short visLeft = rect.Left + padding.Left + bordered;
-        short visRight = rect.Right - padding.Right - bordered;
-
+        // Включаем Clipping (нужно реализовать в Render или здесь)
+        // Идея: рисовать только то, что попадает в rect
         for (auto& ctrl : controls) {
-            SMALL_RECT r = ctrl->rect;
+            // Временный сдвиг для отрисовки
+            SMALL_RECT originalRect = ctrl->rect;
+            
+            ctrl->rect.Top -= scrollY;
+            ctrl->rect.Bottom -= scrollY;
 
-            if (direction == Vertical) {
-                if (r.Bottom <= visTop) continue;
-                if (r.Top >= visBottom) continue;
-
-                r.Top = (((r.Top) > (visTop)) ? (r.Top) : (visTop));
-                r.Bottom = (((r.Bottom) < (visBottom)) ? (r.Bottom) : (visBottom));
-            } else {
-                if (r.Right <= visLeft) continue;
-                if (r.Left >= visRight) continue;
-
-                r.Left = (((r.Left) > (visLeft)) ? (r.Left) : (visLeft));
-                r.Right = (((r.Right) < (visRight)) ? (r.Right) : (visRight));
+            // Простая проверка на видимость (AABB)
+            if (ctrl->rect.Bottom >= rect.Top + padding.Top && 
+                ctrl->rect.Top <= rect.Bottom - padding.Bottom) {
+                
+                // Тут кроется нюанс: если элемент отрисуется частично 
+                // вне границ, он затрет рамку или соседние UI блоки.
+                // Рекомендуется в Render::draw реализовать проверку границ rect контейнера.
+                ctrl->draw();
             }
 
-            SMALL_RECT old = ctrl->rect;
-            ctrl->rect = r;
-
-            ctrl->draw();
-
-            ctrl->rect = old;
+            ctrl->rect = originalRect; // Возвращаем координаты
         }
+
+        // Опционально: отрисовка полосы прокрутки (Scrollbar)
+        drawScrollbar();
+    }
+
+private:
+    void drawScrollbar() {
+        if (maxScroll <= 0) return;
+        
+        short x = rect.Right;
+        short height = rect.Bottom - rect.Top - 1;
+        if (height <= 0) return;
+
+        // Рисуем "дорожку"
+        for (short y = 0; y <= height; ++y) {
+            Render::putChar({x, (short)(rect.Top + y)}, L'░', 0x08);
+        }
+
+        // Рисуем "ползунок"
+        short thumbPos = (scrollY * height) / (maxScroll + height);
+        Render::putChar({x, (short)(rect.Top + thumbPos)}, L'█', 0x07);
     }
 };
