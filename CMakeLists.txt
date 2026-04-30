@@ -1,80 +1,77 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(demo5 LANGUAGES CXX)
+project(demo_widget LANGUAGES CXX)
 
-# Стандарт
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Тип сборки по умолчанию
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
-# Собираем исходники
-file(GLOB_RECURSE SRC_FILES
+# =========================
+# Demo selector
+# =========================
+set(DEMO_NAME "demo_widget" CACHE STRING "Select demo entrypoint (without .cpp)")
+
+message(STATUS "Building demo: ${DEMO_NAME}")
+
+# =========================
+# Core sources (engine / framework)
+# =========================
+file(GLOB_RECURSE CORE_SOURCES
+    CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/Core/*.cpp
     ${CMAKE_SOURCE_DIR}/BasicElements/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/demo5.cpp
 )
 
-# Исполняемый файл
-add_executable(demo5
-    ${SRC_FILES}
+# =========================
+# Demo entrypoints (only ONE selected)
+# =========================
+set(DEMO_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/${DEMO_NAME}.cpp
 )
 
-# Include paths
-target_include_directories(demo5 PRIVATE
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/src/${DEMO_NAME}.cpp)
+    message(FATAL_ERROR "Demo entrypoint not found: ${DEMO_NAME}.cpp")
+endif()
+
+# =========================
+# Target
+# =========================
+add_executable(${PROJECT_NAME}
+    ${CORE_SOURCES}
+    ${DEMO_SOURCES}
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Core
     ${CMAKE_SOURCE_DIR}/BasicElements
 )
 
 # =========================
-# Компилятор-зависимые флаги
+# Warnings
 # =========================
-target_compile_options(demo5 PRIVATE
-    # MSVC
-    $<$<CXX_COMPILER_ID:MSVC>:
-        /W4
-        /permissive-
-    >
-
-    # GCC / Clang
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wunused-parameter
-        -Wunused-variable
-    >
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Wunused-parameter -Wunused-variable>
 )
 
 # =========================
-# Оптимизации (Release)
+# Release optimizations
 # =========================
-target_compile_options(demo5 PRIVATE
-    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:
-        /O2
-        /GL
-    >
-
-    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:
-        -O3
-        -march=native
-        -flto
-    >
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/O2 /GL>
+    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-O3 -march=native>
 )
 
-# Линковка (LTO)
-target_link_options(demo5 PRIVATE
+target_link_options(${PROJECT_NAME} PRIVATE
     $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/LTCG>
-    $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-flto>
 )
 
-# Включить IPO если поддерживается
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported)
 if(ipo_supported)
-    set_property(TARGET demo5 PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 endif()

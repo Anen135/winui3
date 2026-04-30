@@ -11,7 +11,7 @@
 #include "../BasicElements/Container.h"
 #include "../BasicElements/Label.h"
 #include "../BasicElements/CFButton.h"
-#define VERSION "1.7"
+#define VERSION "1.8"
 #define DISPLAY_SETUP {\
     InputState::setConsoleCursorPosition({0, 0}); \
     std::cout << " [Wheel: Scroll | ESC: Exit] " << std::endl;\
