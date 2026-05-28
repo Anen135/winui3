@@ -2,6 +2,9 @@
 #include <windows.h>
 #include <iostream>
 #include <memory>
+#include <string>
+#include <thread>
+#include <chrono>
 #include "EventManager.h"
 #include "InputState.h"
 #include "FocusManager.h"
@@ -11,6 +14,7 @@
 #include "../BasicElements/Container.h"
 #include "../BasicElements/Label.h"
 #include "../BasicElements/CFButton.h"
+
 #define VERSION "1.7"
 #define DISPLAY_SETUP {\
     InputState::setConsoleCursorPosition({0, 0}); \
@@ -26,7 +30,6 @@
     root.rearrangeControls();\
     root.draw();\
 }\
-
 
 class CharacterElement : public CFButton {
 public:
@@ -45,11 +48,17 @@ public:
         FillConsoleOutputAttribute(Render::hout, { FOREGROUND_GREEN | FOREGROUND_RED }, 1, { short (rect.Left + 2), rect.Top }, &Render::dump);
         WriteConsoleOutputCharacterW(Render::hout, L"]", 1, { short (rect.Left + 2), rect.Top }, &Render::dump);
     }
-    void action() override {
-        character = (character - L'A' + 1) % 26 + L'A';
-        draw();
-    }
+
+    void action() override;
 };
+
+void CharacterElement::action() {
+    std::wstring msg = L"You clicked on '" + std::wstring(1, character) + L"'!";
+    MessageBoxW(NULL, msg.c_str(), L"Character Clicked", MB_OK);
+}
+
+void CFButton::action() { }
+
 
 // ------------------ Main ------------------
 int main() {
