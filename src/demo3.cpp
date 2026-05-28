@@ -99,7 +99,7 @@ void redrawCurrentPage() {
     EventManager::getInstance().clearAllHandlers<MOUSE_EVENT_RECORD>(); 
 
     int start = currentPage * maxButtonsPerPage;
-    int end = std::min(start + maxButtonsPerPage, (int)allButtons.size());
+    int end = (((start + maxButtonsPerPage) < ((int)allButtons.size())) ? (start + maxButtonsPerPage) : ((int)allButtons.size()));
 
     SHORT top = 2;
     for (int i = start; i < end; ++i) {

@@ -1,6 +1,11 @@
 *.exe
+*.log
+*.zip
+env
 /build
 /out
 .vscode/
 /exe
+/bin/
+/Dist/
 CMakePresets.json
